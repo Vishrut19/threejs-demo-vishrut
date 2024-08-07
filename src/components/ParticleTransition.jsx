@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, useState } from "react";
+import React, { useRef, useMemo, useState, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { Text } from "@react-three/drei";
@@ -6,20 +6,19 @@ import { Text } from "@react-three/drei";
 const ParticleTransition = ({ phase }) => {
   const particlesRef = useRef();
   const [time, setTime] = useState(0);
-  const count = 5000;
+  const count = 1000;
   const columns = 50;
-  const rows = Math.ceil(count / columns);
 
-  const [matrixDigits, setMatrixDigits] = useState(() =>
-    Array.from({ length: columns }, () =>
-      Array.from({ length: rows }, () => ({
+  const matrixChars = useMemo(() => {
+    return Array.from({ length: columns }, () =>
+      Array.from({ length: Math.ceil(count / columns) }, () => ({
         value: Math.random() > 0.5 ? "1" : "0",
-        y: Math.random() * 4 - 2,
-        speed: Math.random() * 0.1 + 0.05,
+        y: Math.random() * 8 - 4,
+        speed: Math.random() * 0.2 + 0.1,
         opacity: Math.random(),
       }))
-    )
-  );
+    );
+  }, [count, columns]);
 
   const spherePositions = useMemo(() => {
     const positions = new Float32Array(count * 3);
@@ -31,19 +30,7 @@ const ParticleTransition = ({ phase }) => {
       positions[i * 3 + 2] = Math.cos(phi);
     }
     return positions;
-  }, []);
-
-  const matrixPositions = useMemo(() => {
-    const positions = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      const col = i % columns;
-      const row = Math.floor(i / columns);
-      positions[i * 3] = (col / columns - 0.5) * 4;
-      positions[i * 3 + 1] = (row / rows - 0.5) * 4;
-      positions[i * 3 + 2] = 0;
-    }
-    return positions;
-  }, []);
+  }, [count]);
 
   const torusPositions = useMemo(() => {
     const torus = new THREE.TorusGeometry(1, 0.3, 16, 100);
@@ -64,9 +51,11 @@ const ParticleTransition = ({ phase }) => {
         targetY = spherePositions[i3 + 1];
         targetZ = spherePositions[i3 + 2];
       } else if (phase === 1) {
-        targetX = matrixPositions[i3];
-        targetY = matrixPositions[i3 + 1];
-        targetZ = matrixPositions[i3 + 2];
+        const col = i % columns;
+        const row = Math.floor(i / columns);
+        targetX = (col / columns - 0.5) * 4;
+        targetY = matrixChars[col][row].y;
+        targetZ = 0;
       } else {
         const j = i % (torusPositions.length / 3);
         targetX = torusPositions[j * 3];
@@ -80,23 +69,17 @@ const ParticleTransition = ({ phase }) => {
     }
 
     if (phase === 1) {
-      setMatrixDigits((prevDigits) =>
-        prevDigits.map((column) =>
-          column.map((digit) => {
-            digit.y -= digit.speed;
-            digit.opacity -= 0.01;
-            if (digit.y < -2 || digit.opacity <= 0) {
-              return {
-                value: Math.random() > 0.5 ? "1" : "0",
-                y: 2,
-                speed: Math.random() * 0.1 + 0.05,
-                opacity: 1,
-              };
-            }
-            return digit;
-          })
-        )
-      );
+      matrixChars.forEach((column, colIndex) => {
+        column.forEach((char, rowIndex) => {
+          char.y -= char.speed * delta;
+          char.opacity -= 0.01;
+          if (char.y < -4 || char.opacity <= 0) {
+            char.y = 4;
+            char.value = Math.random() > 0.5 ? "1" : "0";
+            char.opacity = 1;
+          }
+        });
+      });
     }
 
     particles.geometry.attributes.position.needsUpdate = true;
@@ -116,15 +99,15 @@ const ParticleTransition = ({ phase }) => {
         <pointsMaterial size={0.02} color="lime" />
       </points>
       {phase === 1 &&
-        matrixDigits.flatMap((column, colIndex) =>
-          column.map((digit, rowIndex) => (
+        matrixChars.flatMap((column, colIndex) =>
+          column.map((char, rowIndex) => (
             <Text
               key={`${colIndex}-${rowIndex}`}
-              position={[(colIndex / columns - 0.5) * 4, digit.y, 0]}
+              position={[(colIndex / columns - 0.5) * 4, char.y, 0]}
               fontSize={0.1}
-              color={new THREE.Color(0, 1, 0).multiplyScalar(digit.opacity)}
+              color={new THREE.Color(0, 1, 0).multiplyScalar(char.opacity)}
             >
-              {digit.value}
+              {char.value}
             </Text>
           ))
         )}
