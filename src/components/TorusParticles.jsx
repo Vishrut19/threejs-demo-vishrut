@@ -2,35 +2,31 @@ import React, { useRef, useEffect, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
-function TorusParticles() {
+function TorusParticles({ previousParticles }) {
   const particlesRef = useRef();
   const startTimeRef = useRef(null);
-  const transitionDuration = 5; // Transition duration in seconds
-  const count = 5000; // Number of particles
+  const transitionDuration = 5;
+  const count = previousParticles
+    ? previousParticles.geometry.attributes.position.count
+    : 5000;
 
-  // Create torus geometry once and store it
   const torus = useMemo(() => new THREE.TorusGeometry(1, 0.3, 16, 100), []);
   const torusPositions = useMemo(
-    () => Array.from(torus.attributes.position.array), // Convert to regular array
+    () => Array.from(torus.attributes.position.array),
     [torus]
   );
 
   useEffect(() => {
     const particles = particlesRef.current;
-    const positions = new Float32Array(count * 3);
-
-    // Initialize particles to random positions on a plane
-    for (let i = 0; i < count; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 4;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 4;
-      positions[i * 3 + 2] = 0; // Flat plane
-    }
+    const positions = previousParticles
+      ? previousParticles.geometry.attributes.position.array.slice()
+      : new Float32Array(count * 3);
 
     particles.geometry.setAttribute(
       "position",
       new THREE.BufferAttribute(positions, 3)
     );
-  }, [count]);
+  }, [count, previousParticles]);
 
   useFrame((state) => {
     const particles = particlesRef.current;
@@ -44,7 +40,7 @@ function TorusParticles() {
     const transitionProgress = Math.min(elapsedTime / transitionDuration, 1);
 
     for (let i = 0; i < positions.length; i += 3) {
-      const j = (i / 3) % (torusPositions.length / 3); // Wrap around torus positions
+      const j = (i / 3) % (torusPositions.length / 3);
 
       positions[i] = THREE.MathUtils.lerp(
         positions[i],
@@ -63,14 +59,12 @@ function TorusParticles() {
       );
     }
 
-    if (particles.geometry.attributes.position) {
-      particles.geometry.attributes.position.needsUpdate = true;
-    }
+    particles.geometry.attributes.position.needsUpdate = true;
   });
 
   return (
     <points ref={particlesRef}>
-      <bufferGeometry attach="geometry" />
+      <bufferGeometry />
       <pointsMaterial attach="material" size={0.05} color="white" />
     </points>
   );

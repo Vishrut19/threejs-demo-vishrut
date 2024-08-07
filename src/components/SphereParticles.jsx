@@ -1,9 +1,8 @@
-// SphereParticles.jsx
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, forwardRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
-function SphereParticles({ visible, sphereRadius = 3.0 }) {
+const SphereParticles = forwardRef(({ visible, sphereRadius = 3.0 }, ref) => {
   // Set default sphere radius to 3.0
   const particlesRef = useRef();
 
@@ -53,6 +52,6 @@ function SphereParticles({ visible, sphereRadius = 3.0 }) {
       <pointsMaterial attach="material" size={0.01} color="white" />
     </points>
   );
-}
+});
 
 export default SphereParticles;
