@@ -6,9 +6,10 @@ import { Text } from "@react-three/drei";
 const ParticleTransition = ({ phase }) => {
   const particlesRef = useRef();
   const [time, setTime] = useState(0);
-  const count = 1000;
-  const columns = 50;
+  const count = 1000; // Total number of particles
+  const columns = 50; // Number of columns in matrix phase
 
+  // Create matrix characters with random initial properties
   const matrixChars = useMemo(() => {
     return Array.from({ length: columns }, () =>
       Array.from({ length: Math.ceil(count / columns) }, () => ({
@@ -20,6 +21,7 @@ const ParticleTransition = ({ phase }) => {
     );
   }, [count, columns]);
 
+  // Calculate random sphere positions
   const spherePositions = useMemo(() => {
     const positions = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
@@ -32,6 +34,7 @@ const ParticleTransition = ({ phase }) => {
     return positions;
   }, [count]);
 
+  // Get torus positions using a torus geometry
   const torusPositions = useMemo(() => {
     const torus = new THREE.TorusGeometry(1, 0.3, 16, 100);
     return Array.from(torus.attributes.position.array);
@@ -42,32 +45,38 @@ const ParticleTransition = ({ phase }) => {
     const particles = particlesRef.current;
     const positions = particles.geometry.attributes.position.array;
 
+    // Update positions of particles based on phase
     for (let i = 0; i < count; i++) {
       const i3 = i * 3;
       let targetX, targetY, targetZ;
 
       if (phase === 0) {
+        // Move particles to sphere positions
         targetX = spherePositions[i3];
         targetY = spherePositions[i3 + 1];
         targetZ = spherePositions[i3 + 2];
       } else if (phase === 1) {
+        // Move particles to matrix-like effect
         const col = i % columns;
         const row = Math.floor(i / columns);
         targetX = (col / columns - 0.5) * 4;
         targetY = matrixChars[col][row].y;
         targetZ = 0;
       } else {
+        // Move particles to torus positions
         const j = i % (torusPositions.length / 3);
         targetX = torusPositions[j * 3];
         targetY = torusPositions[j * 3 + 1];
         targetZ = torusPositions[j * 3 + 2];
       }
 
+      // Animate the transition
       positions[i3] += (targetX - positions[i3]) * 0.1;
       positions[i3 + 1] += (targetY - positions[i3 + 1]) * 0.1;
       positions[i3 + 2] += (targetZ - positions[i3 + 2]) * 0.1;
     }
 
+    // Animate matrix effect characters
     if (phase === 1) {
       matrixChars.forEach((column, colIndex) => {
         column.forEach((char, rowIndex) => {
@@ -87,6 +96,7 @@ const ParticleTransition = ({ phase }) => {
 
   return (
     <group>
+      {/* Render particle points */}
       <points ref={particlesRef}>
         <bufferGeometry>
           <bufferAttribute
